@@ -1,12 +1,20 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, Pressable } from 'react-native'
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+} from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigation } from '@react-navigation/native'
 
 import { useMutation, gql } from '@apollo/client'
 
 const SIGN_UP_MUTATION = gql`
-  mutation signup($email: String!, $password: String!, $name: String!) {
-    signup(input: { email: $email, password: $password, name: $name }) {
+  mutation signUp($email: String!, $password: String!, $name: String!) {
+    signUp(input: { email: $email, password: $password, name: $name }) {
       token
       user {
         id
@@ -25,10 +33,28 @@ const SignUpScreen = () => {
 
   const navigation = useNavigation()
 
-  const mutation = useMutation(SIGN_UP_MUTATION)
+  //mutation[0] : A function to trigger the mutation
+  // mutation[1] : result object
+  // { data, error, loading}
+  const [signup, { data, error, loading }] = useMutation(SIGN_UP_MUTATION)
+
+  console.log(data)
+  console.log(error)
+
+  if (error) {
+    Alert.alert('Error signing up. Try Again')
+  }
+
+  if (data) {
+    // save token
+    AsyncStorage.setItem('token', data.signUp.token).then(() => {
+      //redirect home
+      navigation.navigate('Home')
+    })
+  }
 
   const onSubmit = () => {
-    // submit
+    signup({ variables: { name, email, password } })
   }
 
   return (
@@ -75,9 +101,11 @@ const SignUpScreen = () => {
           height: 50,
           borderRadius: 5,
           alignItems: 'center',
+          flexDirection: 'row',
           justifyContent: 'center',
           marginTop: 25,
         }}>
+        {loading && <ActivityIndicator />}
         <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
           Sign Up
         </Text>
@@ -85,6 +113,7 @@ const SignUpScreen = () => {
 
       <Pressable
         onPress={() => navigation.navigate('SignIn')}
+        disabled={loading}
         style={{
           height: 50,
           borderRadius: 5,
